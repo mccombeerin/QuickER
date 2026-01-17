@@ -16,8 +16,8 @@ const Header = () => {
             href="tel:911" 
             className="flex items-center gap-2 text-urgent font-semibold hover:opacity-80 transition-opacity"
           >
-            <Phone className="w-4 h-4" />
-            <span className="hidden sm:inline">Emergency: 911</span>
+            <Phone className="w-7 h-7" />
+            <span className="hidden sm:inline">Call 911 for Life-Threatening Conditions</span>
           </a>
         </div>
       </div>
