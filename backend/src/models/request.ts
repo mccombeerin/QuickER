@@ -1,19 +1,19 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface RequestDocument extends Document {
+export interface IRequest extends Document {
   patientName: string;
   condition: string;
-  urgency: "low" | "medium" | "high";
-  hospitalId: mongoose.Types.ObjectId;
-  requestTime: Date;
+  urgency: string;
+  hospital: string;
+  createdAt: Date;
 }
 
-const RequestSchema = new Schema<RequestDocument>({
+const requestSchema = new Schema<IRequest>({
   patientName: { type: String, required: true },
   condition: { type: String, required: true },
-  urgency: { type: String, enum: ["low", "medium", "high"], default: "low" },
-  hospitalId: { type: Schema.Types.ObjectId, ref: "Hospital", required: true },
-  requestTime: { type: Date, default: Date.now },
+  urgency: { type: String, required: true },
+  hospital: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
 });
 
-export const Request = mongoose.model<RequestDocument>("Request", RequestSchema);
+export const Request = mongoose.model<IRequest>("Request", requestSchema);
