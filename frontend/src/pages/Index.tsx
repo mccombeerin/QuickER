@@ -10,7 +10,6 @@ const Index = () => {
       <Header />
       <main>
         <HeroSection />
-        <WaitTimeDisplay />
         <CheckInForm />
       </main>
       <Footer />
