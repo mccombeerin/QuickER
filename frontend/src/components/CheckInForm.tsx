@@ -2,48 +2,56 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
 
+const SYMPTOMS_LIST = [
+  "Head trauma",
+  "High fever",
+  "Chest pain",
+  "Difficulty breathing",
+  "Bodily pain",
+] as const;
 
+const SEVERITY_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
+
+type SymptomsMap = Record<string, number>;
+
+type FormData = {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+
+  // keeping both sets so neither side loses fields:
+  phone: string;
+  email: string;
+
+  address: string;
+  heartrate: string;
+  healthCardNumber: string;
+
+  symptoms: SymptomsMap; // symptom -> severity
+};
 
 const CheckInForm = () => {
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const SYMPTOMS_LIST = [
-    "Head trauma",
-    "High fever",
-    "Chest pain",
-    "Difficulty breathing",
-    "Bodily pain",
-  ] as const;
-
-  const SEVERITY_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
-
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
     dateOfBirth: "",
     phone: "",
-    symptoms: {} as Record<string, number>, // ✅ symptom -> severity
-    heartrate: "",
+    email: "",
     address: "",
+    heartrate: "",
+    healthCardNumber: "",
+    symptoms: {},
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    // Optional: require at least one symptom selected
-    // if (Object.keys(formData.symptoms).length === 0) {
-    //   setIsSubmitting(false);
-    //   toast({ title: "Please select at least one symptom." });
-    //   return;
-    // }
 
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
@@ -56,7 +64,7 @@ const CheckInForm = () => {
     });
   };
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -64,16 +72,14 @@ const CheckInForm = () => {
     setFormData((prev) => {
       const isChecked = Object.prototype.hasOwnProperty.call(prev.symptoms, symptom);
 
-      // uncheck -> remove it
       if (isChecked) {
-        const { [symptom]: _, ...rest } = prev.symptoms;
+        const { [symptom]: _removed, ...rest } = prev.symptoms;
         return { ...prev, symptoms: rest };
       }
 
-      // check -> add with default severity
       return {
         ...prev,
-        symptoms: { ...prev.symptoms, [symptom]: 1 }, // default = 1 (change to 5 if you want)
+        symptoms: { ...prev.symptoms, [symptom]: 1 },
       };
     });
   };
@@ -85,20 +91,143 @@ const CheckInForm = () => {
     }));
   };
 
-  // ... keep your isSubmitted return block exactly the same ...
+  if (isSubmitted) {
+    return (
+      <section className="py-12 px-4" id="check-in">
+        <div className="container mx-auto max-w-2xl">
+          <div className="rounded-2xl bg-card p-6 md:p-8 shadow-card text-center space-y-3">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+              You’re checked in ✅
+            </h2>
+            <p className="text-muted-foreground">
+              We’ve received your info. You’ll receive updates via SMS.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-12 px-4" id="check-in">
       <div className="container mx-auto max-w-2xl">
-        {/* ... keep the rest of your form exactly the same above ... */}
+        <div className="text-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+            Virtual Check-In
+          </h2>
+          <p className="text-muted-foreground">
+            Complete this form to secure your place in line
+          </p>
+        </div>
 
         <form
           onSubmit={handleSubmit}
           className="rounded-2xl bg-card p-6 md:p-8 shadow-card space-y-6"
         >
-          {/* ... your existing fields ... */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                placeholder="John"
+                value={formData.firstName}
+                onChange={(e) => handleChange("firstName", e.target.value)}
+                required
+                className="h-12"
+              />
+            </div>
 
-          {/* ✅ Symptoms + severity dropdowns */}
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                placeholder="Doe"
+                value={formData.lastName}
+                onChange={(e) => handleChange("lastName", e.target.value)}
+                required
+                className="h-12"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => handleChange("dateOfBirth", e.target.value)}
+                required
+                className="h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="example@gmail.com"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
+                required
+                className="h-12"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                placeholder="123 Street, Ottawa ON"
+                value={formData.address}
+                onChange={(e) => handleChange("address", e.target.value)}
+                required
+                className="h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="healthCardNumber">Health Card Number</Label>
+              <Input
+                id="healthCardNumber"
+                placeholder="9999-999-999-XX"
+                value={formData.healthCardNumber}
+                onChange={(e) => handleChange("healthCardNumber", e.target.value)}
+                required
+                className="h-12"
+              />
+            </div>
+          </div>
+
+          {/* Optional fields (keep or delete if you don’t want them) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                placeholder="(555) 555-5555"
+                value={formData.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
+                className="h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="heartrate">Heart Rate</Label>
+              <Input
+                id="heartrate"
+                placeholder="e.g. 80"
+                value={formData.heartrate}
+                onChange={(e) => handleChange("heartrate", e.target.value)}
+                className="h-12"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Check off any symptoms that warrant your visit to the ER:</Label>
 
@@ -123,7 +252,6 @@ const CheckInForm = () => {
                         <span className="text-sm text-foreground">{symptom}</span>
                       </div>
 
-                      {/* Dropdown appears only when checked */}
                       {checked && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">
@@ -149,19 +277,16 @@ const CheckInForm = () => {
                 );
               })}
             </div>
-
-            {/* Optional: show what was selected */}
-            {/* <pre className="text-xs text-muted-foreground">
-              {JSON.stringify(formData.symptoms, null, 2)}
-            </pre> */}
           </div>
 
-          {/* ... your submit button and footer ... */}
+          <Button type="submit" className="h-12 w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Submitting..." : "Check In"}
+          </Button>
         </form>
       </div>
     </section>
   );
 };
 
-
 export default CheckInForm;
+
