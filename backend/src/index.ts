@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import router from "./routes";
 
 dotenv.config();
 
@@ -15,9 +16,17 @@ async function startServer() {
     const app = express();
     const PORT = process.env.PORT || 5000;
 
+    // Parse JSON bodies
+    app.use(express.json());
+
+    // API routes
+    app.use("/api", router);
+
+    // Root route for testing
     app.get("/", (_req, res) => res.send("Backend is running"));
 
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
   } catch (err) {
     console.error("❌ MongoDB connection error:", err);
   }
