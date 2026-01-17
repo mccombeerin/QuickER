@@ -18,10 +18,11 @@ const CheckInForm = () => {
     firstName: "",
     lastName: "",
     dateOfBirth: "",
-    phone: "",
+    email: "",
     symptoms: "",
     heartrate: "",
-    address: ""
+    address: "",
+    healthCardNumber: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,13 +120,13 @@ const CheckInForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="phone"
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={formData.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
+                id="email"
+                type="email"
+                placeholder="example@gmail.com"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
                 required
                 className="h-12"
               />
@@ -142,13 +143,15 @@ const CheckInForm = () => {
               />
             </div>
             <div className="space-y-2">
-              <Button
-                type = "button"
-                size = "lg"
-                className = "w-full h-12 text-base font-semibold bg-gray-100 text-foreground hover:bg-accent/90 mt-8"
-                >
-                  Check Heart Rate
-              </Button>
+              <Label htmlFor="healthCardNumber">Health Card Number</Label>
+              <Input
+                id="healthCardNumber"
+                placeholder="9999-999-999-XX"
+                value={formData.healthCardNumber}
+                onChange={(e) => handleChange("healthCardNumber", e.target.value)}
+                required
+                className="h-12"
+              />
             </div>
           </div>
           <div className="space-y-2">

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
@@ -10,9 +9,8 @@ import EmergencyDisclaimerModal, {
   STORAGE_KEY,
 } from "@/components/EmergencyDisclaimer";
 
-const Index = () => {
+const Form = () => {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     let acknowledged = false;
@@ -38,21 +36,8 @@ const Index = () => {
 
       <Header />
 
-      <main>
-        <HeroSection />
-
-        {/* Get Started Button */}
-        <div className="flex justify-center mt-12">
-          <button
-            onClick={() => navigate("/Form")}
-            className="px-12 py-5 text-lg font-semibold rounded-2xl
-                       bg-primary text-primary-foreground
-                       hover:opacity-95 transition
-                       shadow-soft"
-          >
-            Get Started
-          </button>
-        </div>
+      <main className = "pt-24">
+        <WaitTimeDisplay />
       </main>
 
       <Footer />
@@ -60,4 +45,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Form;
