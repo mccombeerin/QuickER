@@ -27,3 +27,17 @@ const App = () => (
 );
 
 export default App;
+
+const getRecommendations = async () => {
+  const response = await fetch('http://localhost:5000/api/recommend-hospitals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userLat: 40.712, 
+      userLng: -74.006,
+      severity: 'medium'
+    })
+  });
+  const data = await response.json();
+  console.log("Ranked Hospitals:", data);
+};
