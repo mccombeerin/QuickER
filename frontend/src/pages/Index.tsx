@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import WaitTimeDisplay from "@/components/WaitTimeDisplay";
