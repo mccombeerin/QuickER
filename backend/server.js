@@ -85,6 +85,15 @@ app.post('/api/patient/check-in', async (req, res) => {
 
     const docRef = await db.collection('patient_sessions').add(patientSession);
 
+    await db.collection('hospital_queues').add({
+      hospitalId: bestHospital.id,
+      patientSessionId: docRef.id,
+      severity: symptoms?.severity || "medium",
+      status: "waiting",
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    
     // --- EMAIL LOGIC ---
     const mailOptions = {
       from: '"QuickER Ottawa" <YOUR_EMAIL@gmail.com>',
