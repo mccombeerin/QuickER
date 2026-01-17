@@ -2,66 +2,106 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, CheckCircle2, AlertTriangle } from "lucide-react";
 
+const SYMPTOMS_LIST = [
+  "Head trauma",
+  "High fever",
+  "Chest pain",
+  "Difficulty breathing",
+  "Bodily pain",
+] as const;
 
+const SEVERITY_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
+
+type SymptomsMap = Record<string, number>;
+
+type FormData = {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+
+  // keeping both sets so neither side loses fields:
+  phone: string;
+  email: string;
+
+  address: string;
+  heartrate: string;
+  healthCardNumber: string;
+
+  symptoms: SymptomsMap; // symptom -> severity
+};
 
 const CheckInForm = () => {
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
     dateOfBirth: "",
     phone: "",
-    symptoms: "",
+    email: "",
+    address: "",
     heartrate: "",
-    address: ""
+    healthCardNumber: "",
+    symptoms: {},
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
     setIsSubmitting(false);
     setIsSubmitted(true);
-    
+
     toast({
       title: "Check-in successful!",
       description: "You'll receive updates via SMS.",
     });
   };
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleChange = (field: keyof FormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const toggleSymptom = (symptom: string) => {
+    setFormData((prev) => {
+      const isChecked = Object.prototype.hasOwnProperty.call(prev.symptoms, symptom);
+
+      if (isChecked) {
+        const { [symptom]: _removed, ...rest } = prev.symptoms;
+        return { ...prev, symptoms: rest };
+      }
+
+      return {
+        ...prev,
+        symptoms: { ...prev.symptoms, [symptom]: 1 },
+      };
+    });
+  };
+
+  const setSeverity = (symptom: string, severity: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      symptoms: { ...prev.symptoms, [symptom]: severity },
+    }));
   };
 
   if (isSubmitted) {
     return (
       <section className="py-12 px-4" id="check-in">
         <div className="container mx-auto max-w-2xl">
-          <div className="rounded-2xl bg-card p-8 md:p-12 shadow-card text-center">
-            <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-success" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
-              You're Checked In!
+          <div className="rounded-2xl bg-card p-6 md:p-8 shadow-card text-center space-y-3">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+              You’re checked in ✅
             </h2>
-            <p className="text-muted-foreground mb-6">
-              Your estimated wait time is approximately <span className="font-semibold text-foreground">25 minutes</span>.
-              We'll send updates to your phone.
+            <p className="text-muted-foreground">
+              We’ve received your info. You’ll receive updates via SMS.
             </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-accent-foreground text-sm font-medium">
-              Queue Position: #5
-            </div>
           </div>
         </div>
       </section>
@@ -79,8 +119,11 @@ const CheckInForm = () => {
             Complete this form to secure your place in line
           </p>
         </div>
-        
-        <form onSubmit={handleSubmit} className="rounded-2xl bg-card p-6 md:p-8 shadow-card space-y-6">
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl bg-card p-6 md:p-8 shadow-card space-y-6"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
@@ -93,6 +136,7 @@ const CheckInForm = () => {
                 className="h-12"
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
               <Input
@@ -105,7 +149,7 @@ const CheckInForm = () => {
               />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="dateOfBirth">Date of Birth</Label>
@@ -118,20 +162,24 @@ const CheckInForm = () => {
                 className="h-12"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="phone"
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={formData.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
+                id="email"
+                type="email"
+                placeholder="example@gmail.com"
+                value={formData.email}
+                onChange={(e) => handleChange("email", e.target.value)}
                 required
                 className="h-12"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName">Address</Label>
+              <Label htmlFor="address">Address</Label>
               <Input
                 id="address"
                 placeholder="123 Street, Ottawa ON"
@@ -141,52 +189,99 @@ const CheckInForm = () => {
                 className="h-12"
               />
             </div>
+
             <div className="space-y-2">
-              <Button
-                type = "button"
-                size = "lg"
-                className = "w-full h-12 text-base font-semibold bg-gray-100 text-foreground hover:bg-accent/90 mt-8"
-                >
-                  Check Heart Rate
-              </Button>
+              <Label htmlFor="healthCardNumber">Health Card Number</Label>
+              <Input
+                id="healthCardNumber"
+                placeholder="9999-999-999-XX"
+                value={formData.healthCardNumber}
+                onChange={(e) => handleChange("healthCardNumber", e.target.value)}
+                required
+                className="h-12"
+              />
             </div>
           </div>
+
+          {/* Optional fields (keep or delete if you don’t want them) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                placeholder="(555) 555-5555"
+                value={formData.phone}
+                onChange={(e) => handleChange("phone", e.target.value)}
+                className="h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="heartrate">Heart Rate</Label>
+              <Input
+                id="heartrate"
+                placeholder="e.g. 80"
+                value={formData.heartrate}
+                onChange={(e) => handleChange("heartrate", e.target.value)}
+                className="h-12"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="symptoms">Describe Your Symptoms</Label>
-            <Textarea
-              id="symptoms"
-              placeholder="Please describe what brought you to the ER today..."
-              value={formData.symptoms}
-              onChange={(e) => handleChange("symptoms", e.target.value)}
-              required
-              className="min-h-[100px] resize-none"
-            />
+            <Label>Check off any symptoms that warrant your visit to the ER:</Label>
+
+            <div className="space-y-3 rounded-xl border p-4">
+              {SYMPTOMS_LIST.map((symptom) => {
+                const checked = Object.prototype.hasOwnProperty.call(
+                  formData.symptoms,
+                  symptom
+                );
+                const severity = formData.symptoms[symptom] ?? 1;
+
+                return (
+                  <div key={symptom} className="space-y-2">
+                    <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={checked}
+                          onChange={() => toggleSymptom(symptom)}
+                        />
+                        <span className="text-sm text-foreground">{symptom}</span>
+                      </div>
+
+                      {checked && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            Severity
+                          </span>
+                          <select
+                            className="h-9 rounded-md border bg-background px-2 text-sm"
+                            value={severity}
+                            onChange={(e) =>
+                              setSeverity(symptom, Number(e.target.value))
+                            }
+                          >
+                            {SEVERITY_OPTIONS.map((n) => (
+                              <option key={n} value={n}>
+                                {n}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          
-          <div className="pt-4">
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full h-14 text-base font-semibold shadow-button"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  Processing...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  Complete Check-In
-                  <ArrowRight className="w-5 h-5" />
-                </span>
-              )}
-            </Button>
-          </div>
-          
-          <p className="text-xs text-muted-foreground text-center">
-            By checking in, you agree to our privacy policy. Your information is protected under HIPAA regulations.
-          </p>
+
+          <Button type="submit" className="h-12 w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Submitting..." : "Check In"}
+          </Button>
         </form>
       </div>
     </section>
@@ -194,3 +289,4 @@ const CheckInForm = () => {
 };
 
 export default CheckInForm;
+
