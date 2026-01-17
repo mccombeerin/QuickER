@@ -32,8 +32,6 @@ useEffect(() => {
       <main>
         <HeroSection />
 
-        <CheckInForm />
-
 
         {/* Get Started Button */}
         <div className="flex justify-center mt-12">
