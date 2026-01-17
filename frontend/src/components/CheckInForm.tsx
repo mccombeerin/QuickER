@@ -130,6 +130,26 @@ const CheckInForm = () => {
                 className="h-12"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="firstName">Address</Label>
+              <Input
+                id="address"
+                placeholder="123 Street, Ottawa ON"
+                value={formData.address}
+                onChange={(e) => handleChange("address", e.target.value)}
+                required
+                className="h-12"
+              />
+            </div>
+            <div className="space-y-2">
+              <Button
+                type = "button"
+                size = "lg"
+                className = "w-full h-12 text-base font-semibold bg-gray-100 text-foreground hover:bg-accent/90 mt-8"
+                >
+                  Check Heart Rate
+              </Button>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="symptoms">Describe Your Symptoms</Label>
