@@ -2,13 +2,37 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import { useEffect } from "react";
+
 import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
 import Form from "./pages/Form";
 
-
 const queryClient = new QueryClient();
+
+// This runs once when the app loads.
+// If the user loaded /form (or anything else), it immediately redirects to /
+function ForceHomeOnLoad() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.pathname !== "/") {
+      navigate("/", { replace: true });
+    }
+    // run once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -16,10 +40,12 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ForceHomeOnLoad />
+
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/form" element={<Form />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
@@ -27,17 +53,3 @@ const App = () => (
 );
 
 export default App;
-
-const getRecommendations = async () => {
-  const response = await fetch('http://localhost:5000/api/recommend-hospitals', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      userLat: 40.712, 
-      userLng: -74.006,
-      severity: 'medium'
-    })
-  });
-  const data = await response.json();
-  console.log("Ranked Hospitals:", data);
-};
