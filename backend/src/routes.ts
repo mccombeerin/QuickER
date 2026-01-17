@@ -13,7 +13,7 @@ router.get("/hospitals", async (_req, res) => {
     if (err instanceof Error) {
       res.status(500).json({ error: err.message });
     } else {
-      res.status(500).json({ error: "Unknown error occurred" });
+      res.status(500).json({ error: "Unknown error" });
     }
   }
 });
@@ -28,7 +28,7 @@ router.post("/requests", async (req, res) => {
     if (err instanceof Error) {
       res.status(400).json({ error: err.message });
     } else {
-      res.status(400).json({ error: "Unknown error occurred" });
+      res.status(400).json({ error: "Unknown error" });
     }
   }
 });
