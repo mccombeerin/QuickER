@@ -13,19 +13,11 @@ const Index = () => {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let acknowledged = false;
+useEffect(() => {
+  const acknowledged = sessionStorage.getItem(STORAGE_KEY) === "true";
+  if (!acknowledged) setShowDisclaimer(true);
+}, []);
 
-    try {
-      acknowledged = localStorage.getItem(STORAGE_KEY) === "true";
-    } catch {
-      // ignore storage access issues
-    }
-
-    if (!acknowledged) {
-      setShowDisclaimer(true);
-    }
-  }, []);
 
   return (
     <div className="min-h-screen bg-background">
