@@ -1,3 +1,5 @@
+const triageAlgorithms = require('./triageAlgorithms.js');
+
 const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
@@ -55,6 +57,9 @@ app.post('/api/recommend-hospitals', async (req, res) => {
 
 // --- ENDPOINT 2: PATIENT CHECK-IN & NOTIFICATION ---
 app.post('/api/patient/check-in', async (req, res) => {
+  console.log("HIT CHECK-IN");
+
+
   try {
     const { 
       firstName, lastName, dob, email, address, 
@@ -85,13 +90,64 @@ app.post('/api/patient/check-in', async (req, res) => {
 
     const docRef = await db.collection('patient_sessions').add(patientSession);
 
-    await db.collection('hospital_queues').add({
+    // --- QUEUE ENTRY CREATION ---
+
+    // 1) Compute urgency from the submitted symptoms
+    const symptomScore = triageAlgorithms.calculateSymptomScore(symptoms);
+    const urgencyCategory = triageAlgorithms.categoryFromWeightedAverage(symptomScore);
+
+    // 2) Create a usable timestamp for your algorithms (ISO string)
+    const checkInTime = new Date().toISOString();
+
+    // 3) Pull current active queue entries for this hospital from Firestore
+    const queueSnap = await db.collection('hospital_queues')
+      .where('hospitalId', '==', bestHospital.id)
+      .where('status', 'in', ['waiting', 'queued'])
+      .get();
+
+    const queueTable = queueSnap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // 4) Call algorithms with the required arguments
+    const queuePosition =
+      triageAlgorithms.numPatientsAhead(
+        urgencyCategory,     // userUrgency
+        checkInTime,         // createdAt ISO string
+        queueTable,          // queueTable array
+        bestHospital.id      // hospitalId
+      ) + 1;
+
+    const minutesAhead =
+      triageAlgorithms.minutesAhead(
+        urgencyCategory,
+        checkInTime,
+        queueTable,
+        bestHospital.id
+      );
+
+    const estimatedWaitMins = triageAlgorithms.estimatedWaitTime(minutesAhead);
+
+    // 5) Write the queue entry
+    const queueDocRef = await db.collection('hospital_queues').add({
+      userId: docRef.id,
       hospitalId: bestHospital.id,
-      patientSessionId: docRef.id,
-      severity: symptoms?.severity || "medium",
+      urgencyCategory,
+      queuePosition,
+      estimatedWaitMins,
       status: "waiting",
+      checkInTime,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
+
+    console.log("QUEUE DOC WRITTEN:", queueDocRef.id);
+
+    await db.collection("hospital_queues").add({
+      test: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    console.log("WROTE TEST hospital_queues DOC");
 
     
     // --- EMAIL LOGIC ---
@@ -157,3 +213,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 QuickER Backend Live on Port ${PORT}`);
 });
+
