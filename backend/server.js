@@ -1,3 +1,4 @@
+const triageAlgorithms = require('./triageAlgorithms.js');
 const express = require('express');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
@@ -9,7 +10,6 @@ app.use(cors());
 app.use(express.json());
 
 // 1. Firebase Admin Setup
-// Ensure your serviceAccountKey.json is in the same folder!
 const serviceAccount = require('./serviceAccountKey.json');
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -23,13 +23,15 @@ const transporter = nodemailer.createTransport({
   secure: false,
   auth: {
     user: 'yasmin31.mahdi@gmail.com',
-    pass: process.env.EMAIL_PASS // Ensure this is set in your .env file
+    pass: process.env.EMAIL_PASS 
   },
   tls: { rejectUnauthorized: false }
 });
 
 // 3. POST: Patient Check-in
 app.post('/api/patient/check-in', async (req, res) => {
+  console.log("HIT CHECK-IN");
+
   try {
     const { firstName, lastName, dob, email, symptoms, healthCard } = req.body;
 
@@ -44,10 +46,28 @@ app.post('/api/patient/check-in', async (req, res) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    // 1. Save to patient_sessions (This is what the dashboard reads)
+    // 1. Save to patient_sessions (Main collection for Dashboard)
     const docRef = await db.collection('patient_sessions').add(patientData);
 
-    // 2. Send the pretty email from your teammate's update
+    // 2. Triage Algorithm (Demo Logic)
+    try {
+        const symptomScore = triageAlgorithms.calculateSymptomScore(symptoms);
+        const urgencyCategory = triageAlgorithms.categoryFromWeightedAverage(symptomScore);
+        const checkInTime = new Date().toISOString();
+
+        await db.collection('hospital_queues').add({
+          userId: docRef.id,
+          urgencyCategory,
+          status: "waiting",
+          checkInTime,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Triage Urgency Assigned:", urgencyCategory);
+    } catch (algoErr) {
+        console.log("Triage algorithm step skipped");
+    }
+
+    // 3. Email Logic
     const mailOptions = {
       from: '"QuickER Ottawa" <yasmin31.mahdi@gmail.com>',
       to: email,
@@ -59,19 +79,17 @@ app.post('/api/patient/check-in', async (req, res) => {
           <p>We have processed your triage. Your data has been sent ahead to the nursing station.</p>
           <div style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
             <p><strong>Status:</strong> En-Route</p>
-            <p><strong>Estimated Triage:</strong> Digital check-in complete.</p>
+            <p><strong>Next Step:</strong> Please proceed to the ER immediately.</p>
           </div>
-          <p>Please proceed to your recommended hospital immediately.</p>
         </div>
       `
     };
 
-    transporter.sendMail(mailOptions, (err, info) => {
+    transporter.sendMail(mailOptions, (err) => {
       if (err) console.error("Email failed:", err);
       else console.log("Email sent successfully!");
     });
 
-    // 3. Send the response back to the frontend
     res.json({ success: true, id: docRef.id });
   } catch (error) {
     console.error("Check-in Error:", error);
@@ -82,7 +100,6 @@ app.post('/api/patient/check-in', async (req, res) => {
 // 4. GET: Live Queue (Demo Version - Shows ALL patients)
 app.get('/api/hospital/:id/queue', async (req, res) => {
   try {
-    // We fetch ALL sessions and sort by newest first
     const snapshot = await db.collection('patient_sessions')
       .orderBy('createdAt', 'desc')
       .limit(15)

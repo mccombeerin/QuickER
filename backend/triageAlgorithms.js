@@ -1,12 +1,12 @@
-export const AVERAGE_MINS_CRITICAL = 25;
-export const AVERAGE_MINS_EMERGENT = 18;
-export const AVERAGE_MINS_URGENT = 12;
-export const AVERAGE_MINS_NONURGENT = 8;
-export const AVERAGE_MINS_MINOR_COMPLAINT = 6;
+const AVERAGE_MINS_CRITICAL = 25;
+const AVERAGE_MINS_EMERGENT = 18;
+const AVERAGE_MINS_URGENT = 12;
+const AVERAGE_MINS_NONURGENT = 8;
+const AVERAGE_MINS_MINOR_COMPLAINT = 6;
 
-export const ACTIVE_SLOTS = 6; //number of doctors available to treat patients
+const ACTIVE_SLOTS = 6; //number of doctors available to treat patients
 
-const WEIGHTS = {
+WEIGHTS = {
     headTrauma: 5,
     highFever: 3,
     chestPain: 5,
@@ -43,26 +43,54 @@ function categoryFromWeightedAverage(avg) {
     return 5;
 }
 
-export function numTypePatient(patientType, queueTable, hospitalId, allowedStatuses = ["waiting", "queued"]) {
+function numPatientsAhead(
+    userUrgency,
+    createdAt, // ISO string
+    queueTable,
+    hospitalId,
+    allowedStatuses = ["waiting", "queued"]
+    ) {
+    const userTime = Date.parse(createdAt); // ISO → ms
+
     return queueTable.filter((row) =>
         row.hospitalId === hospitalId &&
-        row.urgencyCategory === patientType &&
-        allowedStatuses.includes(row.status)
+        allowedStatuses.includes(row.status) &&
+        Date.parse(row.checkInTime) < userTime &&
+        Number(row.urgencyCategory) <= Number(userUrgency)
     ).length;
 }
 
-export function totalMinutesAhead(numCriticalPatients, numEmergentPatients, numUrgentPatients, numNonurgentPatients, NumMinorComplantPatients) {
-    criticalMins = numCriticalPatients * AVERAGE_MINS_CRITICAL;
-    emergentMins = numEmergentPatients * AVERAGE_MINS_EMERGENT;
-    urgentMins = numUrgentPatients * AVERAGE_MINS_URGENT;
-    nonurgentMins = numNonurgentPatients * AVERAGE_MINS_NONURGENT;
-    minorComplaintMins = NumMinorComplantPatients * AVERAGE_MINS_MINOR_COMPLAINT;
+function minutesAhead(
+    userUrgency,
+    createdAt, // ISO string
+    queueTable,
+    hospitalId,
+    allowedStatuses = ["waiting", "queued"]
+    ) {
+    const userTime = Date.parse(createdAt);
 
-    totalMinsAhead = criticalMins + emergentMins + urgentMins + nonurgentMins + minorComplaintMins;
-    return totalMinsAhead;
+    const rowsAhead = queueTable.filter((row) =>
+        row.hospitalId === hospitalId &&
+        allowedStatuses.includes(row.status) &&
+        Date.parse(row.checkInTime) < userTime &&
+        Number(row.urgencyCategory) <= Number(userUrgency)
+    );
+
+    const minsByCategory = {
+        1: AVERAGE_MINS_CRITICAL,
+        2: AVERAGE_MINS_EMERGENT,
+        3: AVERAGE_MINS_URGENT,
+        4: AVERAGE_MINS_NONURGENT,
+        5: AVERAGE_MINS_MINOR_COMPLAINT
+    };
+
+    return rowsAhead.reduce((sum, row) => {
+        const perPatient = minsByCategory[Number(row.urgencyCategory)] ?? 0;
+        return sum + perPatient;
+    }, 0);
 }
 
-export function estimatedWaitTime(totalMinsAhead, ACTIVE_SLOTS) {
-    return totalMinsAhead/ACTIVE_SLOTS;
+function estimatedWaitTime(totalMinsAhead, activeSlots = ACTIVE_SLOTS) {
+    return totalMinsAhead/activeSlots;
 }
 
