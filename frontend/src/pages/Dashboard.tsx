@@ -45,10 +45,12 @@ const HospitalDashboard = () => {
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50">
-              <TableHead className="font-bold">Patient Name</TableHead>
-              <TableHead className="font-bold">Symptom Summary</TableHead>
-              <TableHead className="font-bold">Status</TableHead>
-              <TableHead className="text-right font-bold">Check-in Time</TableHead>
+            <TableHead className="font-bold">Patient Name</TableHead>
+            <TableHead className="font-bold">Symptom Summary</TableHead>
+            <TableHead className="font-bold">Status</TableHead>
+            {/* Swap these to match the cell order below */}
+            <TableHead className="font-bold text-center">Triage Level</TableHead>
+            <TableHead className="text-right font-bold">Check-in Time</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -78,19 +80,26 @@ const HospitalDashboard = () => {
               {isCritical ? "CRITICAL" : (patient.status || 'En-Route')}
             </Badge>
           </TableCell>
-          <TableCell className="text-right font-mono">
-            {patient.createdAt?._seconds 
-              ? new Date(patient.createdAt._seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-              : 'Just now'}
-          </TableCell>
+          <TableCell className="text-center">
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+            patient.urgencyCategory <= 2 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"
+        }`}>
+            Level {patient.urgencyCategory || 5}
+        </span>
+        </TableCell>
+        <TableCell className="text-right font-mono text-sm">
+        {typeof patient.createdAt === 'string' 
+            ? patient.createdAt 
+            : 'Just now'}
+        </TableCell>
         </TableRow>
       );
     })
   ) : (
     <TableRow>
-      <TableCell colSpan={4} className="text-center py-20 text-slate-400">
+      <TableCell colSpan={5} className="text-center py-20 text-slate-400">
         No patients currently in the queue.
-      </TableCell>
+        </TableCell>
     </TableRow>
   )}
 </TableBody>

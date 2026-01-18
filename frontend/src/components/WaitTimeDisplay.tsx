@@ -1,9 +1,13 @@
 import { Clock, Users } from "lucide-react";
 
-const WaitTimeDisplay = () => {
-  // In a real app, this would come from an API
-  const estimatedWait = 25;
-  const patientsAhead = 4;
+// 1. Define the "shape" of the data this component expects
+interface WaitTimeProps {
+  estimatedWait: number;
+  patientsAhead: number;
+}
+
+// 2. Pass those props into the function
+const WaitTimeDisplay = ({ estimatedWait, patientsAhead }: WaitTimeProps) => {
   
   return (
     <section className="py-8 px-4">
@@ -24,6 +28,7 @@ const WaitTimeDisplay = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-5 h-5 text-primary-foreground/80" />
                   <span className="text-4xl font-bold text-primary-foreground">
+                    {/* 3. Display the real number from the prop */}
                     {estimatedWait}
                   </span>
                   <span className="text-lg text-primary-foreground/80">min</span>
@@ -37,6 +42,7 @@ const WaitTimeDisplay = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <Users className="w-5 h-5 text-primary-foreground/80" />
                   <span className="text-4xl font-bold text-primary-foreground">
+                    {/* 4. Display the real number from the prop */}
                     {patientsAhead}
                   </span>
                 </div>
