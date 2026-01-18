@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // 1. Firebase Admin Setup
-const serviceAccount = require('./serviceAccountKey.json');
+const serviceAccount = require('./firebase.json');
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
@@ -29,11 +29,13 @@ const transporter = nodemailer.createTransport({
 });
 
 // 3. POST: Patient Check-in
+// 3. POST: Patient Check-in
 app.post('/api/patient/check-in', async (req, res) => {
-  console.log("HIT CHECK-IN");
+  console.log("-----------------------");
+  console.log("🚀 HIT CHECK-IN ROUTE");
 
   try {
-    const { firstName, lastName, dob, email, symptoms, healthCard } = req.body;
+    const { firstName, lastName, dob, email, symptoms, healthCard, waitAtHome } = req.body;
 
     const patientData = {
       firstName: firstName || "Unknown",
@@ -42,63 +44,69 @@ app.post('/api/patient/check-in', async (req, res) => {
       email: email || "",
       symptoms: symptoms || "No symptoms provided",
       healthCard: healthCard || "",
-      status: 'En-Route',
+      waitAtHome: waitAtHome || false,
+      status: waitAtHome ? 'Waiting at Home' : 'In Waiting Room',
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    // 1. Save to patient_sessions (Main collection for Dashboard)
+    // 1. Save to Firestore
     const docRef = await db.collection('patient_sessions').add(patientData);
+    console.log("✅ Patient Saved with ID:", docRef.id);
 
-    // 2. Triage Algorithm (Demo Logic)
+    // 2. Run Triage (Demo Logic)
     try {
         const symptomScore = triageAlgorithms.calculateSymptomScore(symptoms);
         const urgencyCategory = triageAlgorithms.categoryFromWeightedAverage(symptomScore);
-        const checkInTime = new Date().toISOString();
-
         await db.collection('hospital_queues').add({
           userId: docRef.id,
           urgencyCategory,
           status: "waiting",
-          checkInTime,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
-        console.log("Triage Urgency Assigned:", urgencyCategory);
+        console.log("⚖️ Triage Score:", urgencyCategory);
     } catch (algoErr) {
-        console.log("Triage algorithm step skipped");
+        console.log("⚠️ Triage algorithm step skipped");
     }
 
-    // 3. Email Logic
+    // 3. Prepare Email
     const mailOptions = {
       from: '"QuickER Ottawa" <yasmin31.mahdi@gmail.com>',
       to: email,
-      subject: `Your Emergency Routing Confirmed`,
+      subject: waitAtHome ? `Home-Wait Confirmed: QuickER` : `Check-in Confirmed: QuickER`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #eee;">
-          <h2 style="color: #d32f2f;">QuickER Routing Active</h2>
-          <p>Hello <strong>${firstName}</strong>,</p>
-          <p>We have processed your triage. Your data has been sent ahead to the nursing station.</p>
-          <div style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
-            <p><strong>Status:</strong> En-Route</p>
-            <p><strong>Next Step:</strong> Please proceed to the ER immediately.</p>
-          </div>
+        <div style="font-family: sans-serif; max-width: 600px; border: 1px solid #ddd; padding: 20px;">
+          <h2 style="color: #2563eb;">Check-in Successful</h2>
+          <p>Hello ${firstName},</p>
+          ${waitAtHome 
+            ? `<p><strong>You are waiting at home.</strong> We will alert you when a bed is ready.</p>` 
+            : `<p>Please wait in the hospital lobby.</p>`}
         </div>
       `
     };
 
-    transporter.sendMail(mailOptions, (err) => {
-      if (err) console.error("Email failed:", err);
-      else console.log("Email sent successfully!");
+    // 4. Send Email in background (don't make user wait for it)
+    transporter.sendMail(mailOptions).catch(err => console.error("📧 Email failed:", err));
+
+    // 5. SEND FINAL RESPONSE (Only do this ONCE)
+    return res.json({ 
+      success: true, 
+      id: docRef.id,
+      recommendation: { hospitalName: "The Ottawa Hospital - General Campus" } 
     });
 
-    res.json({ success: true, id: docRef.id });
   } catch (error) {
-    console.error("Check-in Error:", error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("❌ Check-in Error:", error);
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
   }
 });
 
-// 4. GET: Live Queue (Demo Version - Shows ALL patients)
+// 4. GET: Live Queue
 app.get('/api/hospital/:id/queue', async (req, res) => {
+  const hospitalId = req.params.id;
+  console.log(`Hospital ID requested: ${hospitalId}`);
+
   try {
     const snapshot = await db.collection('patient_sessions')
       .orderBy('createdAt', 'desc')
@@ -108,6 +116,35 @@ app.get('/api/hospital/:id/queue', async (req, res) => {
     let queue = [];
     snapshot.forEach(doc => {
       queue.push({ id: doc.id, ...doc.data() });
+    });
+    
+    // Always return an array, even if empty
+    res.json(queue);
+  } catch (error) {
+    console.error("Queue Fetch Error:", error);
+    res.status(500).json({ error: "Failed to fetch queue" });
+  }
+});
+
+// Ensure this route is at the bottom of server.js (before app.listen)
+app.get('/api/hospital/:id/queue', async (req, res) => {
+  try {
+    const snapshot = await db.collection('patient_sessions')
+      .orderBy('createdAt', 'desc')
+      .limit(15)
+      .get();
+    
+    const queue = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        // Mapping potential mismatches:
+        firstName: data.firstName || data.patientName?.split(' ')[0] || "Unknown",
+        lastName: data.lastName || data.patientName?.split(' ')[1] || "Patient",
+        symptoms: data.symptoms || data.condition || "Not listed",
+        status: data.status || data.urgency || "Waiting",
+        createdAt: data.createdAt || null
+      };
     });
     
     res.json(queue);

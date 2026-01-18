@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch"; 
 
 const SYMPTOMS_LIST = [
   "Head trauma",
@@ -36,6 +37,7 @@ const CheckInForm = () => {
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [waitAtHome, setWaitAtHome] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -49,55 +51,57 @@ const CheckInForm = () => {
     symptoms: {},
   });
 
- const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    try {
-      // 1. Prepare the data to match your Backend's expectations
-      const payload = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        dob: formData.dateOfBirth, // backend expects 'dob'
-        email: formData.email,
-        address: formData.address,
-        healthCard: formData.healthCardNumber, // backend expects 'healthCard'
-        symptoms: Object.keys(formData.symptoms).join(", "), // converts map to a string
-        userLat: 45.4236, // Parliament Hill coordinates for demo
-        userLng: -75.7009
-      };
+  try {
+    const payload = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      dob: formData.dateOfBirth,
+      email: formData.email,
+      address: formData.address,
+      healthCard: formData.healthCardNumber,
+      // We send a string of symptoms for the dashboard/email
+      symptoms: Object.keys(formData.symptoms).join(", ") || "No symptoms listed",
+      waitAtHome: waitAtHome,
+      userLat: 45.4236, 
+      userLng: -75.7009
+    };
 
-      // 2. Send the request to your Node.js server
-      const response = await fetch('http://localhost:5000/api/patient/check-in', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+    const response = await fetch('http://localhost:5000/api/patient/check-in', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-      const result = await response.json();
+    const result = await response.json();
 
-      if (result.success) {
-        setIsSubmitting(false);
-        setIsSubmitted(true);
-        toast({
-          title: "Check-in successful!",
-          description: `Go to: ${result.recommendation.hospitalName}`,
-        });
-      } else {
-        throw new Error("Server rejected check-in");
-      }
-    } catch (error) {
-      console.error("Connection failed:", error);
+    if (result.success) {
       setIsSubmitting(false);
+      setIsSubmitted(true);
+      
+      // Use optional chaining so it doesn't crash if recommendation is missing
+      const hospital = result.recommendation?.hospitalName || "The Ottawa Hospital";
+      
       toast({
-        variant: "destructive",
-        title: "Connection Error",
-        description: "Could not reach the backend server.",
+        title: "Check-in successful!",
+        description: `Your spot is reserved at ${hospital}`,
       });
+    } else {
+      throw new Error(result.error || "Server rejected check-in");
     }
-  };
+  } catch (error) {
+    console.error("Connection failed:", error);
+    setIsSubmitting(false);
+    toast({
+      variant: "destructive",
+      title: "Connection Error",
+      description: "Could not reach the hospital server. Please try again.",
+    });
+  }
+};
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -126,16 +130,18 @@ const CheckInForm = () => {
     }));
   };
 
-  if (isSubmitted) {
+if (isSubmitted) {
     return (
       <section className="py-12 px-4" id="check-in">
         <div className="container mx-auto max-w-2xl">
-          <div className="rounded-2xl bg-card p-6 md:p-8 shadow-card text-center space-y-3">
+          <div className="rounded-2xl bg-card p-6 md:p-8 shadow-card text-center space-y-3 border-t-4 border-blue-500">
             <h2 className="text-2xl md:text-3xl font-bold text-foreground">
               You’re checked in ✅
             </h2>
             <p className="text-muted-foreground">
-              We’ve received your info. You’ll receive updates via SMS.
+              {waitAtHome 
+                ? "You've chosen to wait at home. Please monitor your email for your 'head to hospital' alert!" 
+                : "We’ve received your info. Please take a seat in the waiting area."}
             </p>
           </div>
         </div>
@@ -313,7 +319,16 @@ const CheckInForm = () => {
               })}
             </div>
           </div>
-
+            <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-xl border border-blue-100 my-4">
+              <div className="space-y-0.5">
+                <Label className="text-blue-900 font-bold">Wait at Home?</Label>
+                <p className="text-xs text-blue-700">Get notified via email when your turn is close.</p>
+              </div>
+              <Switch 
+                checked={waitAtHome}
+                onCheckedChange={setWaitAtHome}
+              />
+            </div>
           <Button type="submit" className="h-12 w-full" disabled={isSubmitting}>
             {isSubmitting ? "Submitting..." : "Check In"}
           </Button>
