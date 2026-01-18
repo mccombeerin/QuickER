@@ -7,32 +7,13 @@ import {
   Routes,
   Route,
   Navigate,
-  useLocation,
-  useNavigate,
 } from "react-router-dom";
-import { useEffect } from "react";
 
 import Index from "./pages/Index";
 import Form from "./pages/Form";
+import HospitalDashboard from "./pages/Dashboard"; 
 
 const queryClient = new QueryClient();
-
-// This runs once when the app loads.
-// If the user loaded /form (or anything else), it immediately redirects to /
-function ForceHomeOnLoad() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (location.pathname !== "/") {
-      navigate("/", { replace: true });
-    }
-    // run once on mount only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return null;
-}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -40,11 +21,17 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <ForceHomeOnLoad />
-
         <Routes>
+          {/* Landing Page */}
           <Route path="/" element={<Index />} />
+          
+          {/* Patient Check-in Form */}
           <Route path="/form" element={<Form />} />
+
+          {/* Hospital Live Queue Dashboard */}
+          <Route path="/dashboard" element={<HospitalDashboard />} /> 
+          
+          {/* 404 Catch-all: If page doesn't exist, go home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

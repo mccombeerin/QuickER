@@ -49,19 +49,54 @@ const CheckInForm = () => {
     symptoms: {},
   });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // 1. Prepare the data to match your Backend's expectations
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dob: formData.dateOfBirth, // backend expects 'dob'
+        email: formData.email,
+        address: formData.address,
+        healthCard: formData.healthCardNumber, // backend expects 'healthCard'
+        symptoms: Object.keys(formData.symptoms).join(", "), // converts map to a string
+        userLat: 45.4236, // Parliament Hill coordinates for demo
+        userLng: -75.7009
+      };
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      // 2. Send the request to your Node.js server
+      const response = await fetch('http://localhost:5000/api/patient/check-in', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-    toast({
-      title: "Check-in successful!",
-      description: "You'll receive updates via SMS.",
-    });
+      const result = await response.json();
+
+      if (result.success) {
+        setIsSubmitting(false);
+        setIsSubmitted(true);
+        toast({
+          title: "Check-in successful!",
+          description: `Go to: ${result.recommendation.hospitalName}`,
+        });
+      } else {
+        throw new Error("Server rejected check-in");
+      }
+    } catch (error) {
+      console.error("Connection failed:", error);
+      setIsSubmitting(false);
+      toast({
+        variant: "destructive",
+        title: "Connection Error",
+        description: "Could not reach the backend server.",
+      });
+    }
   };
 
   const handleChange = (field: keyof FormData, value: string) => {
