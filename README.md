@@ -1,2 +1,3 @@
-# QueueCare
-QueueCare is built to deal with long wait times at hospitals. It allows users to virtually log symptoms and personal information, then provides estimated wait times for the nearest hospital.
+# QuickER
+QuickER is a smart triage and patient navigation platform that eliminates the ER waiting room by moving it to the patients home. Unlike standard booking sites, QuickER uses a weighted symptom scoring engine to instantly prioritize patients based on medical urgency. 
+Once checked in, patients receive a email that provides live-updating ETA and a one tap navigation link from the patients address to the hospital. They will then receive email reminders about their appointment and suggested departure time from their home.
